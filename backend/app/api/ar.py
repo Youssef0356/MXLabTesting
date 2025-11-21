@@ -81,6 +81,32 @@ def get_ar_equipment(
     }
 
 
+@router.put("/equipments/{tag}", response_model=AREquipmentResponse)
+def update_ar_equipment(
+    tag: str,
+    payload: AREquipmentCreate,
+    db: Session = Depends(get_db),
+) -> AREquipmentResponse:
+    """
+    Update an existing AR equipment's name and tag.
+    """
+    existing = crud_ar.get_ar_equipment_by_tag(db, tag)
+    if not existing:
+        raise HTTPException(status_code=404, detail="AR equipment not found")
+    
+    existing.name = payload.name
+    existing.tag = payload.tag
+    
+    db.commit()
+    db.refresh(existing)
+    
+    return AREquipmentResponse(
+        name=existing.name,
+        tag=existing.tag,
+        qr_image_url=existing.qr_image_url,
+        created_at=existing.created_at
+    )
+
 
 @router.post("/equipments/{tag}/qr-image", response_model=AREquipmentResponse)
 def upload_qr_image(

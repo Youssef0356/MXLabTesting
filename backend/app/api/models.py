@@ -58,3 +58,40 @@ def create_model_hierarchy(model: ModelCreate, db: Session = Depends(get_db)):
         "buttons": json.loads(created.buttons_json) if created.buttons_json else [],
         "parts": json.loads(created.parts_json) if created.parts_json else []
     }
+
+
+@router.put("/{name}", response_model=dict)
+def update_model_hierarchy(name: str, model: ModelCreate, db: Session = Depends(get_db)):
+    """
+    Update an existing model hierarchy.
+    Accepts the same structure as create but updates an existing model.
+    """
+    existing = crud_models.get_model(db, name)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Model not found")
+    
+    # Update all fields
+    existing.name = model.id
+    existing.model_file_url = model.modelFileUrl
+    existing.description_json = json.dumps([d.dict() for d in model.description]) if model.description else None
+    # Handle video path - ensure it has the correct prefix
+    if model.video and not model.video.startswith("/models/files/") and not model.video.startswith("http"):
+        existing.video = f"/models/files/{model.video}"
+    else:
+        existing.video = model.video
+    existing.datasheet_url = model.datasheetUrl
+    existing.buttons_json = json.dumps([b.dict() for b in model.buttons]) if model.buttons else None
+    existing.parts_json = json.dumps([p.dict() for p in model.parts]) if model.parts else None
+    
+    db.commit()
+    db.refresh(existing)
+    
+    return {
+        "id": existing.name,
+        "modelFileUrl": existing.model_file_url,
+        "description": json.loads(existing.description_json) if existing.description_json else [],
+        "video": existing.video,
+        "datasheetUrl": existing.datasheet_url,
+        "buttons": json.loads(existing.buttons_json) if existing.buttons_json else [],
+        "parts": json.loads(existing.parts_json) if existing.parts_json else []
+    }

@@ -3,7 +3,24 @@ Helper utilities for API endpoints
 """
 import json
 import os
-from typing import Any
+import unicodedata
+import re
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitize filename by removing special characters and replacing spaces.
+    Example: "pièces de rechange.png" -> "pieces_de_rechange.png"
+    """
+    # Normalize unicode characters (e.g. é -> e)
+    filename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore').decode('ASCII')
+    
+    # Replace spaces with underscores
+    filename = filename.replace(' ', '_')
+    
+    # Remove any other non-alphanumeric characters except dots, underscores, and hyphens
+    filename = re.sub(r'[^\w\.-]', '', filename)
+    
+    return filename
 
 
 def resolve_model_urls(model_data: dict, base_url: str = "") -> dict:

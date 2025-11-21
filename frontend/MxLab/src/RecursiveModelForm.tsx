@@ -1,6 +1,6 @@
 import { type ChangeEvent } from 'react'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+import { API_BASE_URL } from './config'
 
 export interface DescriptionItem {
   key: string
@@ -63,8 +63,14 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
   const handleAssetUpload = async (e: ChangeEvent<HTMLInputElement>, field: 'datasheet' | 'video') => {
     const file = e.target.files?.[0]
     if (!file) return
-    const { url } = await handleFileUpload(file, 'asset')
-    onChange({ ...model, [`${field}File`]: file, [`${field}Url`]: url })
+    const { url, filename } = await handleFileUpload(file, 'asset')
+    // Set both the file object and the filename (not URL)
+    // Database expects just the filename in 'video' field, and URL in 'datasheetUrl' field
+    if (field === 'video') {
+      onChange({ ...model, videoFile: file, video: url })
+    } else {
+      onChange({ ...model, datasheetFile: file, datasheetUrl: url })
+    }
   }
 
   // Description handlers
@@ -157,6 +163,7 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
       </div>
 
       {/* Model ID/Name */}
+      {/* Model ID/Name */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700">
           {depth === 0 ? 'Model Name' : 'Part Name'}
@@ -164,8 +171,8 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
         <input
           type="text"
           value={model.id}
-          onChange={(e) => handleFieldChange('id', e.target.value)}
-          placeholder={depth === 0 ? "Ex: Vanne De Regulation" : "Ex: Positionneur electropneumatique"}
+          onChange={(e) => handleFieldChange('id', e.target.value.replace(/\s+/g, '_'))}
+          placeholder={depth === 0 ? "Ex: Vanne_De_Regulation" : "Ex: Positionneur_electropneumatique"}
           className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm border p-2"
         />
       </div>
@@ -203,9 +210,9 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
             }}
             className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
-          {model.modelFileUrl && (
-            <div className="mt-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded">
-              ✅ Model uploaded: {model.modelFileUrl}
+          {(model.modelFileUrl) && (
+            <div className="mt-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded border border-green-200">
+              ✅ Current Model: <span className="font-mono">{model.modelFileUrl.split('/').pop()}</span>
             </div>
           )}
           {!model.id && (
@@ -266,7 +273,11 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
             onChange={(e) => handleAssetUpload(e, 'video')}
             className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
           />
-          {model.videoFile && <span className="text-green-600 text-xs">Uploaded</span>}
+          {(model.videoFile || model.video) && (
+            <div className="mt-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded inline-block">
+              ✅ {model.videoFile ? 'New File Selected' : `Current: ${model.video}`}
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700">Datasheet (PDF)</label>
@@ -276,7 +287,11 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
             onChange={(e) => handleAssetUpload(e, 'datasheet')}
             className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
           />
-          {model.datasheetFile && <span className="text-green-600 text-xs">Uploaded</span>}
+          {(model.datasheetFile || model.datasheetUrl) && (
+            <div className="mt-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded inline-block">
+              ✅ {model.datasheetFile ? 'New File Selected' : `Current: ${model.datasheetUrl.split('/').pop()}`}
+            </div>
+          )}
         </div>
       </div>
 
@@ -308,7 +323,7 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
                   onChange={async (e) => {
                     const f = e.target.files?.[0]
                     if (f) {
-                      const { url, filename } = await handleFileUpload(f, 'asset')
+                      const { filename } = await handleFileUpload(f, 'asset')
                       updateButton(idx, { ...btn, imageFile: f, imageFileName: filename })
                     }
                   }}

@@ -39,6 +39,11 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
 
   const handleFileUpload = async (file: File, type: 'model' | 'asset'): Promise<{ url: string, filename: string }> => {
     try {
+      if (!API_BASE_URL) {
+        alert('❌ API_BASE_URL is not defined')
+        return { url: '', filename: '' }
+      }
+
       const formData = new FormData()
       formData.append('file', file)
       const endpoint = type === 'model' ? '/upload/model' : '/upload/asset'
@@ -48,7 +53,7 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
         body: formData,
       })
 
-      if (!response.ok) throw new Error('Upload failed')
+      if (!response.ok) throw new Error(`Upload failed: ${response.statusText}`)
       const data = await response.json()
       const url: string = data.url ?? data.model_file_url ?? ''
       const filename: string = data.filename ?? file.name
@@ -188,24 +193,35 @@ export function RecursiveModelForm({ depth, model, onChange, onRemove }: Recursi
               const file = e.target.files?.[0]
               if (!file) return
 
+              if (!API_BASE_URL) {
+                alert('❌ API_BASE_URL is not defined. Please check your configuration.')
+                return
+              }
+
               // Upload to /upload/model with model name
               try {
                 const formData = new FormData()
                 formData.append('file', file)
                 const modelName = model.id || 'Unnamed Model'
+                const url = `${API_BASE_URL}/upload/model?name=${encodeURIComponent(modelName)}`
+                console.log('Uploading to:', url)
 
-                const response = await fetch(`${API_BASE_URL}/upload/model?name=${encodeURIComponent(modelName)}`, {
+                const response = await fetch(url, {
                   method: 'POST',
                   body: formData,
                 })
 
-                if (!response.ok) throw new Error('Model upload failed')
+                if (!response.ok) {
+                  const errorText = await response.text()
+                  throw new Error(`Model upload failed: ${response.status} ${response.statusText} - ${errorText}`)
+                }
                 const data = await response.json()
-                onChange({ ...model, modelFileUrl: data.model_file_url })
+                const uploadedUrl = data.model_file_url ?? data.url ?? ''
+                onChange({ ...model, modelFileUrl: uploadedUrl })
                 alert(`✅ 3D Model uploaded successfully!`)
-              } catch (e) {
-                console.error(e)
-                alert('❌ Model upload failed. Make sure you entered a model name first!')
+              } catch (e: any) {
+                console.error('Upload error:', e)
+                alert(`❌ Model upload failed: ${e.message}`)
               }
             }}
             className="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"

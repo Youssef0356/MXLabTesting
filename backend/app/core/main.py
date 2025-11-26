@@ -11,15 +11,10 @@ from sqlalchemy.exc import OperationalError
 
 app = FastAPI(title="MXLab Testing API")
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://192.168.1.12:5173",
-]
-
+# Allow all origins with credentials using regex
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origin_regex='.*',
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

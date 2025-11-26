@@ -94,6 +94,11 @@ function CreateEquipment() {
       return
     }
 
+    if (!qrFile) {
+      setError('Le code QR est obligatoire')
+      return
+    }
+
     try {
       setSaving(true)
       setError(null)
@@ -213,7 +218,7 @@ function CreateEquipment() {
 
           {/* QR Code */}
           <section className="space-y-4 border-t border-slate-200 pt-4">
-            <h2 className="text-lg font-semibold text-slate-900">QR Code</h2>
+            <h2 className="text-lg font-semibold text-slate-900">QR Code (obligatoire)</h2>
             <p className="text-xs md:text-sm text-slate-500">
               Sélectionnez une image de QR code générée avec la même référence que le tag ci-dessus.
             </p>
